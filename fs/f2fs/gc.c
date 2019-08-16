@@ -20,6 +20,33 @@
 #include "gc.h"
 #include <trace/events/f2fs.h>
 
+#define TRIGGER_RAPID_GC (!screen_on && power_supply_is_system_supplied())
+static bool screen_on = true;
+static LIST_HEAD(gc_sbi_list);
+static DEFINE_MUTEX(gc_wakelock_mutex);
+static DEFINE_MUTEX(gc_sbi_mutex);
+static struct wakeup_source gc_wakelock;
+
+static inline void rapid_gc_set_wakelock(void)
+{
+	struct f2fs_sb_info *sbi;
+	unsigned int set = 0;
+
+	mutex_lock(&gc_wakelock_mutex);
+	list_for_each_entry(sbi, &gc_sbi_list, list) {
+		set |= sbi->rapid_gc;
+	}
+
+	if (set && !gc_wakelock.active) {
+		pr_info("F2FS-fs: Catching wakelock for rapid GC");
+		__pm_stay_awake(&gc_wakelock);
+	} else if (!set && gc_wakelock.active) {
+		pr_info("F2FS-fs: Unlocking wakelock for rapid GC");
+		__pm_relax(&gc_wakelock);
+	}
+	mutex_unlock(&gc_wakelock_mutex);
+}
+
 static int gc_thread_func(void *data)
 {
 	struct f2fs_sb_info *sbi = data;
