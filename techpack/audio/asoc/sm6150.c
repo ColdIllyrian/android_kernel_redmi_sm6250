@@ -33,7 +33,6 @@
 #include <soc/qcom/socinfo.h>
 #include <dsp/q6afe-v2.h>
 #include <dsp/q6core.h>
-#include <soc/qcom/socinfo.h>
 #include "device_event.h"
 #include "msm-pcm-routing-v2.h"
 #include "codecs/msm-cdc-pinctrl.h"
@@ -46,9 +45,6 @@
 #include <dt-bindings/sound/audio-codec-port-types.h>
 #include "codecs/bolero/wsa-macro.h"
 #include "codecs/wcd937x/wcd937x.h"
-#ifdef CONFIG_SND_SOC_TFA9874_FOR_DAVI
-#include "codecs/tfa98xx/inc/tfa_platform_interface_definition.h"
-#endif
 
 #define DRV_NAME "sm6150-asoc-snd"
 
@@ -424,11 +420,7 @@ static struct dev_config mi2s_rx_cfg[] = {
 };
 
 static struct dev_config mi2s_tx_cfg[] = {
-#ifdef CONFIG_SND_SOC_TFA9874_FOR_DAVI
-	[PRIM_MI2S] = {SAMPLING_RATE_48KHZ, SNDRV_PCM_FORMAT_S16_LE, 2},
-#else
 	[PRIM_MI2S] = {SAMPLING_RATE_48KHZ, SNDRV_PCM_FORMAT_S16_LE, 1},
-#endif
 	[SEC_MI2S]  = {SAMPLING_RATE_48KHZ, SNDRV_PCM_FORMAT_S16_LE, 1},
 	[TERT_MI2S] = {SAMPLING_RATE_48KHZ, SNDRV_PCM_FORMAT_S16_LE, 1},
 	[QUAT_MI2S] = {SAMPLING_RATE_48KHZ, SNDRV_PCM_FORMAT_S16_LE, 1},
@@ -6601,26 +6593,7 @@ static struct snd_soc_dai_link msm_common_dai_links[] = {
 };
 
 static struct snd_soc_dai_link msm_tavil_fe_dai_links[] = {
-#ifdef CONFIG_SND_SOC_TFA9874_FOR_DAVI
-	{
-		.name = TFA_TX_HOSTLESS_CODEC_NAME,
-		.stream_name = TFA_TX_HOSTLESS_STREAM_NAME,
-		.cpu_dai_name = TFA_TX_HOSTLESS_CPU_DAI_NAME,
-		.platform_name	= "msm-pcm-hostless",
-		.dynamic = 1,
-		.dpcm_capture = 1,
-		.trigger = {SND_SOC_DPCM_TRIGGER_POST,
-					SND_SOC_DPCM_TRIGGER_POST},
-		.no_host_mode = SND_SOC_DAI_LINK_NO_HOST,
-		.ignore_suspend = 1,
-		/* this dailink has playback support */
-		.ignore_pmdown_time = 1,
-		/* This dainlink has MI2S support */
-		.codec_dai_name = "snd-soc-dummy-dai",
-		.codec_name = "snd-soc-dummy",
-	},
-#else
-	{
+	{/* hw:x,37 */
 		.name = LPASS_BE_SLIMBUS_4_TX,
 		.stream_name = "Slimbus4 Capture",
 		.cpu_dai_name = "msm-dai-q6-dev.16393",
@@ -6633,7 +6606,6 @@ static struct snd_soc_dai_link msm_tavil_fe_dai_links[] = {
 		.no_host_mode = SND_SOC_DAI_LINK_NO_HOST,
 		.ignore_suspend = 1,
 	},
-#endif
 	/* Ultrasound RX DAI Link */
 	{/* hw:x,38 */
 		.name = "SLIMBUS_2 Hostless Playback",
@@ -6875,41 +6847,6 @@ static struct snd_soc_dai_link msm_common_misc_fe_dai_links[] = {
 		.codec_name = "snd-soc-dummy",
 	},
 };
-
-#ifdef CONFIG_SND_SOC_FOR_ULTRASOUND_PATH
-static struct snd_soc_dai_link msm_common_ultrasound_dai_links[] = {
-	{/* hw:x,41 */
-		.name = "CDC_DMA Hostless_ULTRA",
-		.stream_name = "CDC_DMA Hostless_ULTRA",
-		.cpu_dai_name = "msm-dai-cdc-dma-dev.45106",
-		.platform_name = "msm-pcm-hostless",
-		.codec_name = "bolero_codec",
-		.codec_dai_name = "rx_macro_rx2",
-		.id = MSM_BACKEND_DAI_RX_CDC_DMA_RX_1,
-		.trigger = {SND_SOC_DPCM_TRIGGER_POST,
-			    SND_SOC_DPCM_TRIGGER_POST},
-		.no_host_mode = SND_SOC_DAI_LINK_NO_HOST,
-		.ignore_suspend = 1,
-		 /* this dailink has playback support */
-		.ignore_pmdown_time = 1,
-		//.be_hw_params_fixup = msm_be_hw_params_fixup,
-		.ops = &msm_cdc_dma_be_ops,
-	},
-	{/* hw:x,42 */
-		.name = "TX3_CDC_DMA Hostless_ULTRA",
-		.stream_name = "TX3_CDC_DMA Hostless_ULTRA",
-		.cpu_dai_name = "msm-dai-cdc-dma-dev.45113",
-		.platform_name = "msm-pcm-hostless",
-		.trigger = {SND_SOC_DPCM_TRIGGER_POST,
-			    SND_SOC_DPCM_TRIGGER_POST},
-		.no_host_mode = SND_SOC_DAI_LINK_NO_HOST,
-		.ignore_suspend = 1,
-		.codec_name = "bolero_codec",
-		.codec_dai_name = "tx_macro_tx2",
-		.ops = &msm_cdc_dma_be_ops,
-	},
-};
-#endif
 
 static struct snd_soc_dai_link msm_common_be_dai_links[] = {
 	/* Backend AFE DAI Links */
@@ -8042,9 +7979,6 @@ static struct snd_soc_dai_link msm_sm6150_dai_links[
 			 ARRAY_SIZE(msm_bolero_fe_dai_links) +
 			 ARRAY_SIZE(msm_tasha_fe_dai_links) +
 			 ARRAY_SIZE(msm_common_misc_fe_dai_links) +
-#ifdef CONFIG_SND_SOC_FOR_ULTRASOUND_PATH
-			 ARRAY_SIZE(msm_common_ultrasound_dai_links) +
-#endif
 			 ARRAY_SIZE(msm_int_compress_capture_dai) +
 			 ARRAY_SIZE(msm_common_be_dai_links) +
 			 ARRAY_SIZE(msm_tavil_be_dai_links) +
@@ -8353,7 +8287,6 @@ static struct snd_soc_card *populate_snd_card_dailinks(struct device *dev)
 	u32 wcn_btfm_intf = 0;
 	const struct of_device_id *match;
 	u32 tasha_codec = 0;
-	int hw_platform;
 
 	match = of_match_node(sm6150_asoc_machine_of_match, dev->of_node);
 	if (!match) {
@@ -8376,13 +8309,6 @@ static struct snd_soc_card *populate_snd_card_dailinks(struct device *dev)
 
 		total_links += ARRAY_SIZE(msm_common_misc_fe_dai_links);
 
-#ifdef CONFIG_SND_SOC_FOR_ULTRASOUND_PATH
-		memcpy(msm_sm6150_dai_links + total_links,
-		       msm_common_ultrasound_dai_links,
-		       sizeof(msm_common_ultrasound_dai_links));
-
-		total_links += ARRAY_SIZE(msm_common_ultrasound_dai_links);
-#endif
 		rc = of_property_read_u32(dev->of_node, "qcom,tavil_codec",
 						&tavil_codec);
 		if (rc)
@@ -8478,23 +8404,6 @@ static struct snd_soc_card *populate_snd_card_dailinks(struct device *dev)
 				__func__);
 		} else {
 			if (mi2s_audio_intf) {
-				hw_platform = get_hw_version_platform();
-				dev_info(dev, "%s: hw_platform is %d.\n", __func__, hw_platform);
-				if (HARDWARE_PLATFORM_DAVINCI == hw_platform) {
-					dev_info(dev, "%s: hardware is HARDWARE_PLATFORM_DAVINCI.\n", __func__);
-					msm_mi2s_be_dai_links[0].codec_name = "tfa98xx.3-0034";
-					msm_mi2s_be_dai_links[0].codec_dai_name = "tfa98xx-aif-3-34";
-				} else if (HARDWARE_PLATFORM_PHOENIX == hw_platform) {
-					dev_info(dev, "%s: hardware is HARDWARE_PLATFORM_PHOENIX.\n", __func__);
-					msm_mi2s_be_dai_links[0].codec_name = "tfa98xx.1-0034";
-					msm_mi2s_be_dai_links[0].codec_dai_name = "tfa98xx-aif-1-34";
-				} else {
-					dev_info(dev, "%s: hardware is unknown, %d.\n", __func__, hw_platform);
-					msm_mi2s_be_dai_links[0].codec_name = "msm-stub-codec.1";
-					msm_mi2s_be_dai_links[0].codec_dai_name = "msm-stub-rx";
-					msm_mi2s_be_dai_links[1].codec_name = "msm-stub-codec.1";
-					msm_mi2s_be_dai_links[1].codec_dai_name = "msm-stub-tx";
-				}
 				memcpy(msm_sm6150_dai_links + total_links,
 					msm_mi2s_be_dai_links,
 					sizeof(msm_mi2s_be_dai_links));
